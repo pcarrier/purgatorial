@@ -1,0 +1,13 @@
+[Install]
+WantedBy=multi-user.target
+
+[Unit]
+After=network.target
+
+[Service]
+User=purgatorial
+NoNewPrivileges=true
+ExecStart=/usr/bin/deno task start
+WorkingDirectory=/usr/local/share/purgatorial
+Restart=on-failure
+RestartSec=1
