@@ -1,8 +1,8 @@
-import {load} from "https://deno.land/std@0.224.0/dotenv/mod.ts";
+import { load } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
 
 const env = await load(),
   token = env["TOKEN"],
-  msgTimeout = Number(env["MSG_TIMEOUT"] || "10800000"),
+  msgTimeout = Number(env["MSG_TIMEOUT"] || "10800"),
   channelIDs = (env["CHANNEL_IDS"] || "").split(",").map((id) => id.trim());
 
 function error(err: Event | ErrorEvent): never {
@@ -12,15 +12,17 @@ function error(err: Event | ErrorEvent): never {
 
 function fetchWith429Retry(url: string, init?: RequestInit): Promise<Response> {
   return new Promise((resolve, reject) => {
-    fetch(url, init).then((res) => {
-      if (res.status === 429) {
-        setTimeout(() => {
-          fetchWith429Retry(url, init).then(resolve, reject);
-        }, Number(res.headers.get("retry-after")) * 1000);
-      } else {
-        resolve(res);
-      }
-    }).catch(reject);
+    fetch(url, init)
+      .then((res) => {
+        if (res.status === 429) {
+          setTimeout(() => {
+            fetchWith429Retry(url, init).then(resolve, reject);
+          }, Number(res.headers.get("retry-after")) * 1000);
+        } else {
+          resolve(res);
+        }
+      })
+      .catch(reject);
   });
 }
 
@@ -30,9 +32,10 @@ async function deleteMessage(channelID: string, messageID: string) {
     {
       method: "DELETE",
       headers: {
-        "Authorization": `Bot ${token}`,
+        Authorization: `Bot ${token}`,
       },
-    });
+    }
+  );
   if (!res.ok && res.status !== 404) {
     console.log("failed to delete message", res.status);
     Deno.exit(1);
@@ -48,9 +51,9 @@ async function backfillChannel(channelID: string) {
       }`,
       {
         headers: {
-          "Authorization": `Bot ${token}`,
+          Authorization: `Bot ${token}`,
         },
-      },
+      }
     );
     if (!res.ok) {
       console.log("failed to fetch messages", res.status);
@@ -62,12 +65,12 @@ async function backfillChannel(channelID: string) {
     }
     for (const message of messages) {
       const date = new Date(message.timestamp);
-      if (Date.now() - date.getTime() > msgTimeout) {
+      if (Date.now() - date.getTime() > 1000 * msgTimeout) {
         await deleteMessage(channelID, message.id);
       } else {
         setTimeout(() => {
           deleteMessage(channelID, message.id);
-        }, date.getTime() + msgTimeout - Date.now());
+        }, date.getTime() + 1000 * msgTimeout - Date.now());
       }
     }
     after = messages[0].id;
@@ -85,18 +88,20 @@ function connect(): WebSocket {
         setInterval(() => {
           ws.send(JSON.stringify({ op: 1, d }));
         }, payload.d.heartbeat_interval);
-        ws.send(JSON.stringify({
-          op: 2,
-          d: {
-            token,
-            intents: 1 << 9,
-            properties: {
-              os: "deno",
-              browser: "deno",
-              device: "deno",
+        ws.send(
+          JSON.stringify({
+            op: 2,
+            d: {
+              token,
+              intents: 1 << 9,
+              properties: {
+                os: "deno",
+                browser: "deno",
+                device: "deno",
+              },
             },
-          },
-        }));
+          })
+        );
         break;
       case 0:
         switch (payload.t) {

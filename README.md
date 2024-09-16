@@ -11,7 +11,7 @@ Remove Discord messages in select channels after a timeout. Fails fast, to be re
 ```
 TOKEN=CENSORED.CENSORED.CENSORED
 CHANNEL_IDS=1234,5678
-MSG_TIMEOUT=3600000
+MSG_TIMEOUT=3600
 ```
 
 - Share the install link from the `Installation` tab with your servers' admins.
