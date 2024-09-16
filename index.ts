@@ -2,7 +2,7 @@ import {load} from "https://deno.land/std@0.224.0/dotenv/mod.ts";
 
 const env = await load(),
   token = env["TOKEN"],
-  msgTimeout = Number(env["MSG_TIMEOUT"] || "10800000"),
+  msgTimeout = Number(env["MSG_TIMEOUT"] || "10800"),
   channelIDs = (env["CHANNEL_IDS"] || "").split(",").map((id) => id.trim());
 
 function error(err: Event | ErrorEvent): never {
@@ -62,12 +62,12 @@ async function backfillChannel(channelID: string) {
     }
     for (const message of messages) {
       const date = new Date(message.timestamp);
-      if (Date.now() - date.getTime() > msgTimeout) {
+      if ((Date.now()/1000) - (date.getTime()/1000) > msgTimeout) {
         await deleteMessage(channelID, message.id);
       } else {
         setTimeout(() => {
           deleteMessage(channelID, message.id);
-        }, date.getTime() + msgTimeout - Date.now());
+        }, (date.getTime()/1000) + msgTimeout - (Date.now()/1000));
       }
     }
     after = messages[0].id;
